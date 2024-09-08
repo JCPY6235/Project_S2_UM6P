@@ -1,0 +1,85 @@
+
+
+
+
+def barycentre(C):
+   ax, ay = C[0][0], C[0][1]
+   bx, by = C[1][0], C[1][1]
+   cx, cy = C[2][0], C[2][1]
+   
+   # Calcul du barycentre
+   x = (ax + bx + cx) / 3.0
+   y = (ay + by + cy) / 3.0
+   
+   return (x, y)
+
+
+def dist_modified(x, y, z):
+    x=np.asarray(x)
+    y=np.asarray(y)
+    z=np.asarray(z)
+    return LA.norm(np.cross(y-x, x-z))/LA.norm(y-x) # Distance from z to a line drawn between x and y
+
+Barycentre = []
+for i in range(nbcells):
+    Barycentre.append(barycentre(Cells_Cord[i]))
+
+
+
+
+
+
+##---------------------Computing of dt-------------##
+somme = []
+for i in range(nbcells):
+    k = cells.volume[i]
+    list_faces = list(cells.faceid[i])
+    elem = 0
+    for j in range(3):
+        mesure1 = faces.mesure[list_faces[j]]
+        d1 = dist_modified(nodes._vertex[faces._nodeid[list_faces[j]][0]][:-2], nodes._vertex[faces._nodeid[list_faces[j]][1]][:-2] , Barycentre[faces.cellid[list_faces[j]][0]])
+        d2 = dist_modified(nodes._vertex[faces._nodeid[list_faces[j]][0]][:-2], nodes._vertex[faces._nodeid[list_faces[j]][1]][:-2], Barycentre[faces.cellid[list_faces[j]][1]])
+        dist1 = d1 + d2
+        elem += mesure1/dist1
+    somme += [1/k*elem]
+
+lamda = 0.8
+D = 1
+
+dt = lamda/(D * max (somme))
+
+print(dt)
+
+
+save_n=0
+temps=0
+T=0.15
+u=u_initiale
+i=0
+unew = np.zeros(nbcells)
+while temps<=T:
+    temps+=dt
+    save_n+=1
+    for j in range(nbcells):
+        list_faces = cells.faceid[j]
+        elem = 0
+        for k in range(3):
+            mesure_edge = faces.mesure[list_faces[k]]
+            d1 = dist_modified(nodes._vertex[faces._nodeid[list_faces[k]][0]][:-2], nodes._vertex[faces._nodeid[list_faces[k]][1]][:-2] , Barycentre[faces.cellid[list_faces[k]][0]])
+            d2 = dist_modified(nodes._vertex[faces._nodeid[list_faces[k]][0]][:-2], nodes._vertex[faces._nodeid[list_faces[k]][1]][:-2], Barycentre[faces.cellid[list_faces[k]][1]])
+            dist1 = d1 + d2
+            
+            if j == faces.cellid[list_faces[k]][0]:
+                u_diff = u[faces.cellid[list_faces[k]][1]] - u[faces.cellid[list_faces[k]][0]]
+            else :
+                u_diff = u[faces.cellid[list_faces[k]][0]] - u[faces.cellid[list_faces[k]][1]]
+            elem += mesure1*u_diff/dist1
+        unew[j] = u[j] - dt/(cells.volume[j]) * (-D)*elem
+
+    u=np.copy(unew)
+    i+=1
+    #if i == 100 or i == 150 or i== 200:
+      # save_paraview_one_variable(u, cells._nodeid, nodes._vertex, 2, "res_VF4"+str(save_n))
+       
+#save_paraview_one_variable(u, cells._nodeid, nodes._vertex, 2, "res_VF4"+str(save_n))
+    
